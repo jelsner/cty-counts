@@ -1,6 +1,8 @@
 ---
 title: "County Counts"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 Get the SPC dataset. Filter by Year 1950-1989. Create path using buffer. Get county boundaries for Iowa. Aggregate tornado counts by county.
@@ -74,8 +76,14 @@ ctys <- ctys %>%
   mutate(nT = rowSums(mtrx),
          rate = nT/as.numeric(st_area(ctys))/(1989 - 1950 + 1),
          rate = rate * 10^10) %>%
-  select(countyfp, name, nT, rate) %>%
-  arrange(desc(rate))
+  select(countyfp, name, nT, rate) 
+
+ctys %>%
+  arrange(desc(nT)) %>%
+  as.data.frame %>%
+  select(countyfp, name, nT) %>%
+  tbl_df %>%
+  print(n = 99)
 ```
 
 Make a map.
