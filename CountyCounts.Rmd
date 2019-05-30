@@ -55,10 +55,15 @@ ctys <- us_counties(states = "IA") %>%
 Start by determining the intersections of the state polygons and the tornado points.
 
 ```{r}
-mtrx <- st_contains(ctys, 
+mtrx <- st_intersects(ctys, 
                     Torn.sf, 
                     sparse = FALSE)
 dim(mtrx)
+
+m <- st_intersects(st_union(ctys),
+                 Torn.sf,
+                 sparse = FALSE)
+sum(m)
 ```
 
 The result is a 99 (counties) by 8465 (tornadoes) matrix of logical values indicating whether or not each tornado occurred within each state.
@@ -76,7 +81,7 @@ ctys <- ctys %>%
   mutate(nT = rowSums(mtrx),
          rate = nT/as.numeric(st_area(ctys))/(1989 - 1950 + 1),
          rate = rate * 10^10) %>%
-  select(countyfp, name, nT, rate) 
+  select(countyfp, name, nT, rate)
 
 ctys %>%
   arrange(desc(nT)) %>%
@@ -84,6 +89,9 @@ ctys %>%
   select(countyfp, name, nT) %>%
   tbl_df %>%
   print(n = 99)
+
+ctys2 <- ctys %>% 
+  arrange(name)
 ```
 
 Make a map.
@@ -94,5 +102,53 @@ tm_shape(ctys) +
   tm_fill("rate",
           title = "Annual Rate\n[/10,000 sq. km]") +
   tm_text("nT") +
+  tm_layout(legend.outside = TRUE)
+
+tm_shape(ctys) +
+  tm_borders(col = "gray70") +
+tm_shape(Torn.sf) +
+  tm_lines()
+```
+
+Get Grazulis data from Tom Allemeier.
+```{r}
+library(lubridate)
+
+Graz.df <- read.csv(file = "IowaTornadoes.csv") %>%
+  mutate(Date = parse_date_time(Graz.df$date, "mdy")) %>%
+  filter(Date >= "1950-01-01")
+  
+dim(Graz.df)
+```
+
+```{r}
+library(stringr)
+sum(!is.na(str_extract(Graz.df$counties, "ADAIR")))
+
+NAMES <- ctys %>%
+  arrange(name) %>%
+  pull(name) %>%
+  toupper()
+
+head(NAMES)
+
+nTg <- NULL
+for(i in 1:length(NAMES)) {
+  nTg[i] = sum(!is.na(str_extract(Graz.df$counties, NAMES[i])))
+}
+
+ctys2$nTg <- nTg
+```
+
+```{r}
+ctys2 <- ctys2 %>%
+  mutate(rateg = nTg/as.numeric(st_area(ctys2))/(1989 - 1950 + 1),
+         rateg = rateg * 10^10)
+
+tm_shape(ctys2) +
+  tm_borders(col = "gray70") +
+  tm_fill("rateg",
+          title = "Annual Rate\n[/10,000 sq. km]") +
+  tm_text("nTg") +
   tm_layout(legend.outside = TRUE)
 ```
