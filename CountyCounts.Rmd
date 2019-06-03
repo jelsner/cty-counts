@@ -10,15 +10,22 @@ Get the SPC dataset. Filter by Year 1950-1989. Create tornado damage path using 
 Download the tornado data from the Storm Prediction Center (SPC) http://www.spc.noaa.gov/gis/svrgis/ and load the shapefile into R.
 ```{r}
 library(sf)
-download.file(url = "http://www.spc.noaa.gov/gis/svrgis/zipped/1950-2017-torn-aspath.zip",
-              destfile = "tornado2017.zip")
-unzip("tornado2017.zip")
+
+if (!file.exists("1950-2017-torn-initpoint")) { 
+  download.file("http://www.spc.noaa.gov/gis/svrgis/zipped/1950-2017-torn-aspath.zip",
+                destfile = "temporary.zip")
+  unzip("temporary.zip")
+}
+
 TornL.sf <- read_sf(dsn = "1950-2017-torn-aspath",
                    stringsAsFactors = FALSE)
 
-download.file(url = "http://www.spc.noaa.gov/gis/svrgis/zipped/1950-2017-torn-initpoint.zip",
-              destfile = "tornado2017.zip")
-unzip("tornado2017.zip")
+if (!file.exists("1950-2017-torn-initpoint")) { 
+  download.file("http://www.spc.noaa.gov/gis/svrgis/zipped/1950-2017-torn-initpoint.zip",
+                destfile = "temporary.zip")
+  unzip("temporary.zip")
+}
+
 TornP.sf <- read_sf(dsn = "1950-2017-torn-initpoint",
                    stringsAsFactors = FALSE)
 ```
@@ -32,7 +39,7 @@ any(is.na(st_dimension(TornP.sf)))
 Merge the two data sets. Insert point geometries where there are missing linestring geometries.
 ```{r}
 TornTrack.sf <- TornL.sf
-eg <- which(st_is_empty(Torn.sf))
+eg <- which(st_is_empty(TornTrack.sf))
 TornTrack.sf$geometry[eg] <- TornP.sf$geometry[eg]
 ```
 
@@ -77,7 +84,7 @@ mtrx <- st_intersects(ctys,
 dim(mtrx)
 
 m <- st_intersects(st_union(ctys),
-                 Torn.sf,
+                 TornPath.sf,
                  sparse = FALSE)
 sum(m)
 ```
@@ -187,12 +194,14 @@ ctys %>%
 Get population data from the U.S. census.
 ```{r}
 library(tidycensus)
-census_api_key("fce1b34522174228a5835e377d3ae0cd80588461", install = TRUE)
+options(tigris_use_cache = TRUE)
+
+census_api_key("fce1b34522174228a5835e377d3ae0cd80588461", overwrite = TRUE)
 
 IA_pop <- get_acs(geography = "county", 
-                     variables = "B01003_001", 
-                     state = "IA",
-                     geometry = TRUE) %>%
+                  variables = "B01003_001", 
+                  state = "IA",
+                  geometry = TRUE) %>%
   st_transform(crs = st_crs(ctys))
 
 IA_pop$geometry <- NULL
