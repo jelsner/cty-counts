@@ -55,6 +55,18 @@ TornTrack.sf <- TornTrack.sf %>%
 TornPath.sf <- st_buffer(TornTrack.sf, 
                          dist = TornTrack.sf$Width/2, 
                          endCapStyle = 'ROUND')
+
+TornPath_sfc <- st_geometry(TornPath.sf)
+
+centroids <- st_centroid(TornPath_sfc)
+scale <- (TornPath_sfc - centroids) * .5 + centroids
+st_crs(scale) <- 3857
+
+plot(TornPath_sfc[1])
+plot(scale[1], add = TRUE, col = "red")
+
+TornPath2.sf <- TornPath.sf
+TornPath2.sf$geometry <- st_geometry(scale)
 ```
 
 Get county boundaries for the state of IA.
@@ -79,12 +91,12 @@ tm_shape(ctys) +
 Count the number of paths intersecting each county.
 ```{r}
 mtrx <- st_intersects(ctys, 
-                      TornPath.sf, 
+                      TornPath2.sf, 
                       sparse = FALSE)
 dim(mtrx)
 
 m <- st_intersects(st_union(ctys),
-                 TornPath.sf,
+                 TornPath2.sf,
                  sparse = FALSE)
 sum(m)
 ```
@@ -211,5 +223,3 @@ ctys <- left_join(ctys, IA_pop, by = "GEOID")
 cor(ctys$nT, ctys$estimate)
 cor(ctys$nTg, ctys$estimate)
 ```
-
-Shrink SPC tracks by a proportion to account for the fact that EF2+ damage occurs only for a portion of the track. Look in here to see how you can perform affine transformations of geometries. https://geocompr.robinlovelace.net/geometric-operations.html
