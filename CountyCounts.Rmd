@@ -211,3 +211,5 @@ ctys <- left_join(ctys, IA_pop, by = "GEOID")
 cor(ctys$nT, ctys$estimate)
 cor(ctys$nTg, ctys$estimate)
 ```
+
+Shrink SPC tracks by a proportion to account for the fact that EF2+ damage occurs only for a portion of the track. Look in here to see how you can perform affine transformations of geometries. https://geocompr.robinlovelace.net/geometric-operations.html
